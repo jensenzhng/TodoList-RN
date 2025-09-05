@@ -155,7 +155,6 @@ export default function TodoScreen() {
             keyboardDismissMode="on-drag"
           />
 
-          <SafeAreaView edges={['bottom']} style={styles.footerSafe}>
             <View style={styles.footer}>
               <Text style={styles.count}>
                 {todos.filter(t => !t.done).length} remaining
@@ -174,7 +173,6 @@ export default function TodoScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-          </SafeAreaView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </>
@@ -250,7 +248,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 8,
+    paddingBottom: 10
   },
   footerSafe: {
     backgroundColor: '#0b1220',
