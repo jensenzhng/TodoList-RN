@@ -16,7 +16,7 @@ import { auth } from '../firebase';
 import firestore, {
   FirebaseFirestoreTypes,
 } from '@react-native-firebase/firestore';
-
+ 
 type Todo = {
   id: string;
   text: string;
@@ -24,7 +24,7 @@ type Todo = {
   createdAt?: FirebaseFirestoreTypes.Timestamp | null;
 };
 type FirebaseFirestoreTypes = typeof firestore;
-
+ 
 export default function TodoScreen() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [text, setText] = useState('');
@@ -34,7 +34,7 @@ export default function TodoScreen() {
     () => firestore().collection('users').doc(uid).collection('todos'),
     [uid],
   );
-
+ 
   useEffect(() => {
     const unsub = colRef.orderBy('createdAt', 'desc').onSnapshot(snap => {
       const data: Todo[] = snap?.docs.map(d => ({
@@ -45,7 +45,7 @@ export default function TodoScreen() {
     });
     return unsub;
   }, [colRef]);
-
+ 
   const addTodo = async () => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -57,15 +57,36 @@ export default function TodoScreen() {
       createdAt: firestore.FieldValue.serverTimestamp(),
     });
   };
-
+ 
   const toggleTodo = async (id: string, done: boolean) => {
     await colRef.doc(id).update({ done: !done });
   };
-
+ 
   const deleteTodo = async (id: string) => {
     await colRef.doc(id).delete();
   };
-
+ 
+  const editTodo = async (id: string, currentText: string) => {
+    Alert.prompt(
+      'Edit Task',
+      'Update your todo text:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Save',
+          onPress: async (newText?: string) => {
+            const trimmed = newText?.trim();
+            if (trimmed) {
+              await colRef.doc(id).update({ text: trimmed });
+            }
+          },
+        },
+      ],
+      'plain-text',
+      currentText,
+    );
+  };
+ 
   const clearCompleted = async () => {
     const snap = await colRef.where('done', '==', true).get();
     if (snap.empty) return;
@@ -82,9 +103,9 @@ export default function TodoScreen() {
       },
     ]);
   };
-
+ 
   const signOut = () => auth().signOut();
-
+ 
   const renderItem = ({ item }: { item: Todo }) => (
     <View style={styles.row}>
       <TouchableOpacity
@@ -100,6 +121,12 @@ export default function TodoScreen() {
         {item.text}
       </Text>
       <TouchableOpacity
+        onPress={() => editTodo(item.id, item.text)}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <Text style={styles.edit}>✎</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
         onPress={() => deleteTodo(item.id)}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
@@ -107,7 +134,7 @@ export default function TodoScreen() {
       </TouchableOpacity>
     </View>
   );
-
+ 
   return (
     <>
       <StatusBar barStyle="light-content" />
@@ -122,7 +149,7 @@ export default function TodoScreen() {
               <Text style={styles.signoutText}>Sign out</Text>
             </TouchableOpacity>
           </View>
-
+ 
           <View style={styles.inputRow}>
             <TextInput
               ref={inputRef}
@@ -142,7 +169,7 @@ export default function TodoScreen() {
               <Text style={styles.btnText}>Add</Text>
             </TouchableOpacity>
           </View>
-
+ 
           <FlatList
             data={todos}
             keyExtractor={t => t.id}
@@ -154,31 +181,31 @@ export default function TodoScreen() {
             }
             keyboardDismissMode="on-drag"
           />
-
-            <View style={styles.footer}>
-              <Text style={styles.count}>
-                {todos.filter(t => !t.done).length} remaining
-              </Text>
-              <TouchableOpacity
-                onPress={clearCompleted}
-                disabled={!todos.some(t => t.done)}
+ 
+          <View style={styles.footer}>
+            <Text style={styles.count}>
+              {todos.filter(t => !t.done).length} remaining
+            </Text>
+            <TouchableOpacity
+              onPress={clearCompleted}
+              disabled={!todos.some(t => t.done)}
+            >
+              <Text
+                style={[
+                  styles.clear,
+                  !todos.some(t => t.done) && styles.clearDisabled,
+                ]}
               >
-                <Text
-                  style={[
-                    styles.clear,
-                    !todos.some(t => t.done) && styles.clearDisabled,
-                  ]}
-                >
-                  Clear completed
-                </Text>
-              </TouchableOpacity>
-            </View>
+                Clear completed
+              </Text>
+            </TouchableOpacity>
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </>
   );
 }
-
+ 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#0b1220' },
   container: { flex: 1, paddingHorizontal: 16, paddingTop: 8, gap: 12 },
@@ -195,7 +222,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   signoutText: { color: '#d7def7', fontWeight: '600' },
-
+ 
   inputRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   input: {
     flex: 1,
@@ -215,7 +242,7 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.5 },
   btnText: { color: 'white', fontWeight: '700' },
-
+ 
   sep: { height: 10 },
   row: {
     flexDirection: 'row',
@@ -238,17 +265,18 @@ const styles = StyleSheet.create({
   checkmark: { color: 'white', fontSize: 16, fontWeight: '700' },
   rowText: { flex: 1, color: 'white', fontSize: 16 },
   rowTextDone: { textDecorationLine: 'line-through', color: '#93a0c6' },
+  edit: { color: '#ffd93d', fontSize: 18, paddingHorizontal: 6 },
   delete: { color: '#ff6b6b', fontSize: 18, paddingHorizontal: 6 },
-
+ 
   emptyList: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
   empty: { color: '#93a0c6' },
-
+ 
   footerWrap: { paddingBottom: 10 },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 10
+    paddingBottom: 10,
   },
   footerSafe: {
     backgroundColor: '#0b1220',
